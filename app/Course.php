@@ -9,7 +9,7 @@ class Course extends Model
     //
     protected $fillable = ['course_title', 'course_description', 'course_code'];
 
-    public function all_users_courses()
+    public function users_courses()
     {
         return $this->hasMany(UserCourse::class);
     }

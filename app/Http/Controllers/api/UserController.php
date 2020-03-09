@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
 {
+    //
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -18,12 +19,29 @@ class UserController extends Controller
             'password' => 'required',
         ]);
 
+        /**
+         * If the form is not validated via
+         * the Api throw an error with the
+         * error message to the user
+         * @param:validator error
+         * @return:error
+         */
+
+
         if ($validator->fails()) {
             return response()->json([
                 'error' => $validator->errors()->first(),
                 'errors' => $validator->errors()
             ], 400);
         }
+
+        /**
+         * If the user is not authenticated via
+         * the Api throw an error with the
+         * error message to the user
+         * @param:validator error
+         * @return:error
+         */
 
         auth()->once($request->only('email', 'password'));
         if (!auth()->user()) {
@@ -33,11 +51,21 @@ class UserController extends Controller
             ], 401);
         }
 
+        /**
+         * If the user is found and Authenticated
+         * then render the details and generate an
+         * access token for the user to access the site
+         * @param: access token
+         * @return: success 200
+         */
+
         $user = User::find(auth()->user()->id);
         $token =  JWTAuth::fromUser($user);
         return response()->json([
             'token' => $token,
             'user'  => $user,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 120
         ], 200);
 
     }
@@ -50,6 +78,8 @@ class UserController extends Controller
             'password' => 'required',
         ]);
 
+        // Validate
+
         if (!$validator) {
             return response()->json([
                 'error'  => $validator->errors()->first(),
@@ -57,6 +87,11 @@ class UserController extends Controller
             ], 400);
         }
 
+        /**
+         * Now if the validation passes
+         * get the user/by creating the user
+         * and then return token
+         */
 
         $user = User::create([
             'name'     => $request->name,
@@ -64,11 +99,32 @@ class UserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        /**
+         * Generate token for the user
+         * For data to be persisted as
+         * API's don't use session Data
+         */
+
         $token = JWTAuth::fromUser($user);
         return response()->json([
             'token' => $token,
             'user'  => $user,
+            'token_type' => 'bearer',
+            'expires_in' => auth()->factory()->getTTL() * 120
         ], 200);
+    }
+
+    public function user(Request $request)
+    {
+        $user = User::with('users_courses.course')->find(auth()->user()->id);
+
+        return response()->json($user, 200);
+    }
+
+    public function logout()
+    {
+        auth()->logout();
+        return response()->json(['message'=>'Successfully logged out']);
     }
 
 }
